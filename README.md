@@ -1,6 +1,6 @@
-# {{ NAME }}
+# Discord
 
-{{ DESCRIPTION }}
+A Powershell module for interacting with Discord.
 
 ## Prerequisites
 
@@ -12,8 +12,8 @@ This uses the following external resources:
 To install the module from the PowerShell Gallery, you can use the following command:
 
 ```powershell
-Install-PSResource -Name {{ NAME }}
-Import-Module -Name {{ NAME }}
+Install-PSResource -Name Discord
+Import-Module -Name Discord
 ```
 
 ## Usage
