@@ -1,6 +1,6 @@
 # Discord
 
-A Powershell module for interacting with Discord.
+A PowerShell module for interacting with Discord.
 
 ## Prerequisites
 
