@@ -1,69 +1,260 @@
 # Discord
 
-A PowerShell module for interacting with Discord.
+A PowerShell client for Discord, for people using the terminal and scripts using a bot.
+The client provides authentication, encrypted saved contexts, the authenticated identity,
+and a reusable REST command. It does not provide an MCP server, a Gateway client,
+or server, channel, and message management commands.
 
-## Prerequisites
+## Requirements
 
-This uses the following external resources:
-- The [PSModule framework](https://github.com/PSModule) for building, testing and publishing the module.
-
-## Installation
-
-To install the module from the PowerShell Gallery, you can use the following command:
+- PowerShell 7.4 or later.
+- [Context](https://github.com/PSModule/Context) 8.1.3 or later, installed as a module dependency.
+- A Discord application and the credentials described below.
 
 ```powershell
 Install-PSResource -Name Discord
 Import-Module -Name Discord
 ```
 
-## Usage
+## Connect as a bot
 
-Here is a list of example that are typical use cases for the module.
-
-### Example 1: Greet an entity
-
-Provide examples for typical commands that a user would like to do with the module.
+Create or select an application in the [Discord Developer Portal][applications].
+On its **Bot** page, obtain the bot token. The token is not the application's client
+secret and is not a normal Discord account token.
 
 ```powershell
-Greet-Entity -Name 'World'
-Hello, World!
+$botToken = Read-Host -Prompt 'Bot token' -AsSecureString
+Connect-Discord -BotToken $botToken
+Get-DiscordViewer
 ```
 
-### Example 2
+The client validates the token with `GET /users/@me` before saving it. Installing
+the bot in a server is not required for this identity lookup. Other REST operations
+still require the bot's permissions and access to their resources.
 
-Provide examples for typical commands that a user would like to do with the module.
+## Connect interactively as a user
+
+Configure an application you control in the [Developer Portal][applications]:
+
+1. Copy the application ID, used as `ClientID`.
+2. Obtain its **OAuth2 client secret**, not its bot token.
+3. Under **OAuth2 > Redirects**, register exactly `http://localhost:53682/`.
+   The scheme, host, port, path, and trailing slash must match the value passed to the command.
 
 ```powershell
-Import-Module -Name PSModuleTemplate
+$clientSecret = Read-Host -Prompt 'OAuth2 client secret' -AsSecureString
+$connection = @{
+    ClientID     = 'YOUR_APPLICATION_ID'
+    ClientSecret = $clientSecret
+    RedirectUri  = 'http://localhost:53682/'
+}
+Connect-Discord @connection
+Get-DiscordViewer
 ```
 
-### Find more examples
+The command starts a temporary loopback HTTP listener, opens the authorization
+page, validates the returned state and issuer, and exchanges the authorization
+code using S256 PKCE and the client secret. The listener closes on success,
+failure, or timeout. Use `-NoBrowser` to open the displayed authorization URL
+yourself in a browser on the same machine. `-TimeoutSeconds` controls the wait
+for consent and defaults to 180 seconds.
 
-To find more examples of how to use the module, please refer to the [examples](examples) folder.
+The redirect URI must use HTTP on `localhost` or `127.0.0.1`, an explicit
+nonprivileged port, and a path ending in `/`. If the port is occupied or the OS
+does not permit the listener, select another port, register the new exact URI,
+and pass it as `RedirectUri`.
 
-Alternatively, you can use the Get-Command -Module 'This module' to find more commands that are available in the module.
-To find examples of each of the commands you can use Get-Help -Examples 'CommandName'.
+The default OAuth2 scope is only `identify`. Additional supported user scopes
+can be supplied with `-Scope @('identify', 'guilds')`. Installation scopes such
+as `bot` and `webhook.incoming` are not accepted by this user sign-in command.
+User access is limited to the granted scopes and Discord's supported OAuth2
+endpoints. This is not a self-bot or normal-account session-token login.
 
-## Documentation
+[Discord's authorization server metadata][metadata] advertises S256 PKCE and
+public-client token authentication. This client deliberately uses the documented
+confidential application flow and requires a client secret; it does not assume
+that every Discord application qualifies for secretless sign-in. Do not distribute
+your application's client secret to other users or embed it in scripts.
 
-Link to further documentation if available, or describe where in the repository users can find more detailed documentation about
-the module's functions and features.
+## Saved contexts
 
-## Contributing
+Successful connections are saved in the Context vault `PSModule.Discord`.
+Tokens, refresh tokens, and OAuth2 client secrets remain `SecureString` values
+and are encrypted on disk by Context. Protect your local account and vault;
+context objects and vault backups are sensitive even though normal output
+does not display plaintext credentials.
 
-Coder or not, you can contribute to the project! We welcome all contributions.
+The most recent connection becomes the default unless `-NotDefault` is used.
+The default context and its settings are restored in later PowerShell sessions
+without another sign-in. OAuth2 access tokens are refreshed automatically
+when they expire or have 30 seconds or less remaining, and rotated credentials
+are saved back to the same context.
 
-### For Users
+```powershell
+Connect-Discord -BotToken $botToken -Name 'automation'
+Connect-Discord @connection -Name 'personal' -Scope @('identify', 'guilds') -NotDefault
 
-If you don't code, you still sit on valuable information that can make this project even better. If you experience that the
-product does unexpected things, throw errors or is missing functionality, you can help by submitting bugs and feature requests.
-Please see the issues tab on this project and submit a new issue that matches your needs.
+Get-DiscordContext
+Get-DiscordContext -ListAvailable
+Switch-DiscordContext -Context 'personal'
+Get-DiscordViewer -Context 'automation'
+```
 
-### For Developers
+Without a custom name, bot contexts are named `Bot-<user ID>` and user contexts
+are named `User-<user ID>-<client ID>`. Discord user IDs are preserved as strings,
+not rounded numbers. Different accounts and applications can coexist.
 
-If you do code, we'd love to have your contributions. Please read the [Contribution guidelines](CONTRIBUTING.md) for more information.
-You can either help by picking up an existing issue or submit a new one if you have an idea for a new feature or improvement.
+```powershell
+Disconnect-Discord -Context 'personal'
+```
 
-## Acknowledgements
+Disconnect removes only that local saved context. It does not revoke the remote
+grant or reset the bot token. Removing the default leaves no default selected;
+use `Switch-DiscordContext` to choose another saved context.
 
-Here is a list of people and projects that helped this project in some way.
+## Call the REST API
+
+```powershell
+$result = Invoke-DiscordAPI -ApiEndpoint '/users/@me'
+$result.Response
+$result.StatusCode
+$result.Headers
+
+$query = @{ limit = 10 }
+Invoke-DiscordAPI -ApiEndpoint '/users/@me/guilds' -Body $query -Context 'personal'
+```
+
+GET and HEAD dictionary bodies become URL-encoded query parameters, with
+Boolean values encoded as `true` or `false`. Other
+dictionary and object bodies become JSON by default. The `Query` alias for
+`Body` is available for GET requests. The client does not add GitHub pagination
+parameters or collect additional pages automatically.
+
+Responses have `Request`, `Response`, `Headers`, `StatusCode`, and
+`StatusDescription` properties. `Response` contains parsed JSON, or `$null` for
+an empty response such as HTTP 204. `Request` contains only the method and URI,
+not authorization headers, tokens, or request bodies.
+
+Bot contexts use `Authorization: Bot ...`; user contexts use `Bearer ...`.
+Only HTTPS requests to `discord.com` under `/api/v10/` are accepted, including
+when using the full `-Uri` parameter. Redirects are not followed. API failures
+throw errors instead of returning success-shaped results.
+
+HTTP 429 responses are retried up to `RetryCount`, honoring Discord's
+`retry_after` seconds or `Retry-After` header, including fractional seconds.
+Other errors, including 401 and 403, are not retried. There is no cross-process
+rate-limit scheduler.
+
+```powershell
+Get-DiscordConfig
+Set-DiscordConfig -RetryCount 3 -RetryInterval 1 -TimeoutSeconds 100
+```
+
+`RetryInterval` is used only when a 429 response omits both delay fields, with a
+warning. `TimeoutSeconds` in module configuration is the HTTP request timeout,
+separate from the interactive consent timeout.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `Connect-DiscordAccount` (`Connect-Discord`) | Authenticate a bot or OAuth2 user and save its verified context. |
+| `Disconnect-DiscordAccount` (`Disconnect-Discord`) | Remove a local saved context without revoking remote credentials. |
+| `Get-DiscordContext` | Get the default, a named context, or all saved contexts. |
+| `Switch-DiscordContext` | Select a saved context as the default. |
+| `Get-DiscordViewer` | Retrieve the authenticated user or bot from `/users/@me`. |
+| `Get-DiscordConfig` | Read client settings. |
+| `Set-DiscordConfig` | Save client settings and the default context selection. |
+| `Invoke-DiscordAPI` | Call the Discord REST API with a saved context or context object. |
+
+Use `Get-Help -Name <Command> -Examples` for more examples. Commands that change
+local state, and REST calls that change remote state, support `-WhatIf`.
+
+## Development
+
+Source follows the [PSModule/GitHub](https://github.com/PSModule/GitHub) layout:
+typed public classes, private module variables, grouped public and private
+functions, a header, import-time initialization, and a framework manifest overlay. The
+[PSModule framework](https://github.com/PSModule/Process-PSModule) builds and
+packages the module.
+
+The framework builds and imports the module before running the tests. Tests do
+not import or assemble the module themselves. Local contract tests exercise
+public validation without replacing functions with mocks. Live integration
+tests use real Discord credentials and read-only resources.
+
+```powershell
+$config = New-PesterConfiguration
+$config.Run.Path = '.\tests'
+$config.Run.Exit = $true
+$config.Output.Verbosity = 'Detailed'
+Invoke-Pester -Configuration $config
+Invoke-ScriptAnalyzer -Path .\src -Recurse -Settings .\.github\linters\.powershell-psscriptanalyzer.psd1
+```
+
+The template greeting `Get-PSModuleTest` is not part of the client command surface.
+
+### GitHub Actions credentials
+
+The caller uses Process-PSModule `v8` and Pester 6.1 or later within the 6.x
+release line. Its explicit `TestData`
+payload exposes only the following values to the module test jobs:
+
+| GitHub setting | Kind | Purpose |
+| --- | --- | --- |
+| `DISCORD_BOT_TOKEN` | Repository secret | Required for unattended live bot authentication, identity, REST, and encrypted Context tests. |
+| `DISCORD_TEST_GUILD_ID` | Repository variable | Optional existing server to read with the REST client. |
+| `DISCORD_TEST_CHANNEL_ID` | Repository variable | Optional existing channel to read; it must belong to the configured server when both IDs are supplied. |
+
+Invite the bot to the test server with permission to view the selected channel.
+These tests do not send messages or create, edit, or delete Discord resources.
+They create and clean up only their own local Context entries. Missing bot
+credentials fail the live test setup with an actionable error; optional resource
+tests are reported as skipped when their IDs are absent.
+
+#### Set up the test bot
+
+1. Create a dedicated test application in the [Developer Portal][applications].
+   On **Bot**, obtain its token. Resetting an existing token invalidates it for
+   every consumer, so avoid resetting a bot used elsewhere.
+2. In this repository's **Settings > Secrets and variables > Actions > Secrets**,
+   save the token as `DISCORD_BOT_TOKEN`. Do not put it in a variable, source file,
+   or chat message.
+3. To enable resource tests, use **OAuth2 > URL Generator** with the `bot` scope
+   and only **View Channels**. Open the generated URL and install the bot in the
+   test server using an account with **Manage Server**. Allow the bot to view the
+   test channel in its permission overrides.
+4. Enable Discord **User Settings > Advanced > Developer Mode**, then copy the
+   server and channel IDs from their right-click menus. Add them to the repository's
+   Actions **Variables** as `DISCORD_TEST_GUILD_ID` and `DISCORD_TEST_CHANNEL_ID`.
+
+No Gateway process, Administrator permission, or privileged intents are needed.
+The bot can appear offline while these REST tests run.
+
+The framework also needs its standard publishing and GitHub App credentials:
+`PSGALLERY_API_KEY`, `SHELLY_CLIENT_ID`, and `SHELLY_PRIVATE_KEY`, supplied as
+repository or available organization secrets. The old `APIKey` workflow input
+is replaced by `PSGALLERY_API_KEY`.
+
+The existing `release:major`, `release:minor`, `release:patch`, `release:skip`,
+and `release:prerelease` repository labels are explicitly mapped to the v8
+release settings. Legacy unprefixed labels remain accepted.
+
+Initial user OAuth2 consent is interactive, not a CI login technique. A stored
+user context supports unattended refresh after consent, but a disposable CI
+runner cannot safely reuse a static refresh-token secret indefinitely when
+Discord rotates it. Bot-based live CI avoids that rotation and matrix-concurrency
+problem. User sign-in and consent remain a separate interactive check.
+
+## References
+
+- [Discord OAuth2][oauth2]
+- [Authorization server metadata][metadata]
+- [Current user and the `identify` scope][user]
+- [Discord rate limits][rate-limits]
+
+[applications]: https://discord.com/developers/applications
+[oauth2]: https://docs.discord.com/developers/topics/oauth2
+[metadata]: https://discord.com/.well-known/oauth-authorization-server
+[user]: https://docs.discord.com/developers/resources/user
+[rate-limits]: https://docs.discord.com/developers/topics/rate-limits
