@@ -28,6 +28,14 @@ Test:
 #   Docs:
 #     Skip: true
 
+Publish:
+  Module:
+    MajorLabels: 'release:major, major, breaking'
+    MinorLabels: 'release:minor, minor, feature'
+    PatchLabels: 'release:patch, patch, fix'
+    IgnoreLabels: 'release:skip, NoRelease'
+    PrereleaseLabels: 'release:prerelease, prerelease'
+
 Linter:
   env:
     VALIDATE_BIOME_FORMAT: false
