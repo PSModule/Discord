@@ -196,7 +196,8 @@ The template greeting `Get-PSModuleTest` is not part of the client command surfa
 
 ### GitHub Actions credentials
 
-The caller uses Process-PSModule `v8` and Pester 6.1. Its explicit `TestData`
+The caller uses Process-PSModule `v8` and Pester 6.1 or later within the 6.x
+release line. Its explicit `TestData`
 payload exposes only the following values to the module test jobs:
 
 | GitHub setting | Kind | Purpose |
