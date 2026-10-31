@@ -173,21 +173,53 @@ local state, and REST calls that change remote state, support `-WhatIf`.
 
 Source follows the [PSModule/GitHub](https://github.com/PSModule/GitHub) layout:
 typed public classes, private module variables, grouped public and private
-functions, a header, and a framework manifest overlay. The
+functions, a header, import-time initialization, and a framework manifest overlay. The
 [PSModule framework](https://github.com/PSModule/Process-PSModule) builds and
 packages the module.
 
-Run the deterministic tests without Discord credentials or network access to
-Discord. The test bootstrap loads the source in memory when the framework has
-not already imported a built module.
+The framework builds and imports the module before running the tests. Tests do
+not import or assemble the module themselves. Local contract tests exercise
+public validation without replacing functions with mocks. Live integration
+tests use real Discord credentials and read-only resources.
 
 ```powershell
-Import-Module -Name Pester -MinimumVersion 5.7.1 -MaximumVersion '5.*'
-Invoke-Pester -Path .\tests -CI
+$config = New-PesterConfiguration
+$config.Run.Path = '.\tests'
+$config.Run.Exit = $true
+$config.Output.Verbosity = 'Detailed'
+Invoke-Pester -Configuration $config
 Invoke-ScriptAnalyzer -Path .\src -Recurse -Settings .\.github\linters\.powershell-psscriptanalyzer.psd1
 ```
 
 The template greeting `Get-PSModuleTest` is not part of the client command surface.
+
+### GitHub Actions credentials
+
+The caller uses Process-PSModule `v8` and Pester 6.1. Its explicit `TestData`
+payload exposes only the following values to the module test jobs:
+
+| GitHub setting | Kind | Purpose |
+| --- | --- | --- |
+| `DISCORD_BOT_TOKEN` | Repository secret | Required for unattended live bot authentication, identity, REST, and encrypted Context tests. |
+| `DISCORD_TEST_GUILD_ID` | Repository variable | Optional existing server to read with the REST client. |
+| `DISCORD_TEST_CHANNEL_ID` | Repository variable | Optional existing channel to read; it must belong to the configured server when both IDs are supplied. |
+
+Invite the bot to the test server with permission to view the selected channel.
+These tests do not send messages or create, edit, or delete Discord resources.
+They create and clean up only their own local Context entries. Missing bot
+credentials fail the live test setup with an actionable error; optional resource
+tests are reported as skipped when their IDs are absent.
+
+The framework also needs its standard publishing and GitHub App credentials:
+`PSGALLERY_API_KEY`, `SHELLY_CLIENT_ID`, and `SHELLY_PRIVATE_KEY`, supplied as
+repository or available organization secrets. The old `APIKey` workflow input
+is replaced by `PSGALLERY_API_KEY`.
+
+Initial user OAuth2 consent is interactive, not a CI login technique. A stored
+user context supports unattended refresh after consent, but a disposable CI
+runner cannot safely reuse a static refresh-token secret indefinitely when
+Discord rotates it. Bot-based live CI avoids that rotation and matrix-concurrency
+problem. User sign-in and consent remain a separate interactive check.
 
 ## References
 
