@@ -204,7 +204,7 @@ Describe 'Configured Discord read-only resources' -Tag 'Integration' {
             return
         }
 
-        $query = @{ with_counts = 'true' }
+        $query = @{ with_counts = $true }
         $result = Invoke-DiscordAPI -ApiEndpoint "/guilds/$guildID" -Query $query -Context $resourceContext
 
         $result.Response.id | Should-Be -Expected $guildID

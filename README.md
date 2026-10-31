@@ -124,7 +124,8 @@ $query = @{ limit = 10 }
 Invoke-DiscordAPI -ApiEndpoint '/users/@me/guilds' -Body $query -Context 'personal'
 ```
 
-GET and HEAD dictionary bodies become URL-encoded query parameters. Other
+GET and HEAD dictionary bodies become URL-encoded query parameters, with
+Boolean values encoded as `true` or `false`. Other
 dictionary and object bodies become JSON by default. The `Query` alias for
 `Body` is available for GET requests. The client does not add GitHub pagination
 parameters or collect additional pages automatically.
@@ -214,6 +215,10 @@ The framework also needs its standard publishing and GitHub App credentials:
 `PSGALLERY_API_KEY`, `SHELLY_CLIENT_ID`, and `SHELLY_PRIVATE_KEY`, supplied as
 repository or available organization secrets. The old `APIKey` workflow input
 is replaced by `PSGALLERY_API_KEY`.
+
+The existing `release:major`, `release:minor`, `release:patch`, `release:skip`,
+and `release:prerelease` repository labels are explicitly mapped to the v8
+release settings. Legacy unprefixed labels remain accepted.
 
 Initial user OAuth2 consent is interactive, not a CI login technique. A stored
 user context supports unattended refresh after consent, but a disposable CI

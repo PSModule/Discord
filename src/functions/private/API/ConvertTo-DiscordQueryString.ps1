@@ -34,6 +34,9 @@ function ConvertTo-DiscordQueryString {
         }
         foreach ($value in $values) {
             $text = [System.Convert]::ToString($value, [cultureinfo]::InvariantCulture)
+            if ($value -is [bool]) {
+                $text = $text.ToLowerInvariant()
+            }
             $pairs.Add("$encodedKey=$([uri]::EscapeDataString($text))")
         }
     }
