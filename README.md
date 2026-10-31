@@ -92,7 +92,7 @@ are saved back to the same context.
 
 ```powershell
 Connect-Discord -BotToken $botToken -Name 'automation'
-Connect-Discord @connection -Name 'personal' -NotDefault
+Connect-Discord @connection -Name 'personal' -Scope @('identify', 'guilds') -NotDefault
 
 Get-DiscordContext
 Get-DiscordContext -ListAvailable
@@ -210,6 +210,25 @@ These tests do not send messages or create, edit, or delete Discord resources.
 They create and clean up only their own local Context entries. Missing bot
 credentials fail the live test setup with an actionable error; optional resource
 tests are reported as skipped when their IDs are absent.
+
+#### Set up the test bot
+
+1. Create a dedicated test application in the [Developer Portal][applications].
+   On **Bot**, obtain its token. Resetting an existing token invalidates it for
+   every consumer, so avoid resetting a bot used elsewhere.
+2. In this repository's **Settings > Secrets and variables > Actions > Secrets**,
+   save the token as `DISCORD_BOT_TOKEN`. Do not put it in a variable, source file,
+   or chat message.
+3. To enable resource tests, use **OAuth2 > URL Generator** with the `bot` scope
+   and only **View Channels**. Open the generated URL and install the bot in the
+   test server using an account with **Manage Server**. Allow the bot to view the
+   test channel in its permission overrides.
+4. Enable Discord **User Settings > Advanced > Developer Mode**, then copy the
+   server and channel IDs from their right-click menus. Add them to the repository's
+   Actions **Variables** as `DISCORD_TEST_GUILD_ID` and `DISCORD_TEST_CHANNEL_ID`.
+
+No Gateway process, Administrator permission, or privileged intents are needed.
+The bot can appear offline while these REST tests run.
 
 The framework also needs its standard publishing and GitHub App credentials:
 `PSGALLERY_API_KEY`, `SHELLY_CLIENT_ID`, and `SHELLY_PRIVATE_KEY`, supplied as
