@@ -7,10 +7,14 @@ function Get-DiscordViewer {
         Return GET /users/@me using the selected connection. OAuth2 user access requires identify scope.
 
         .EXAMPLE
+        ```powershell
         Get-DiscordViewer
+        ```
 
         .EXAMPLE
+        ```powershell
         Get-DiscordViewer -Context 'automation'
+        ```
 
         .INPUTS
         None

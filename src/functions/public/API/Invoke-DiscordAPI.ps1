@@ -8,13 +8,19 @@ function Invoke-DiscordAPI {
         Only official HTTPS v10 API destinations are accepted. Mutating requests support WhatIf.
 
         .EXAMPLE
+        ```powershell
         Invoke-DiscordAPI -ApiEndpoint '/users/@me'
+        ```
 
         .EXAMPLE
+        ```powershell
         Invoke-DiscordAPI -ApiEndpoint '/users/@me/guilds' -Query @{ limit = 10 } -Context 'personal'
+        ```
 
         .EXAMPLE
+        ```powershell
         Invoke-DiscordAPI -Uri 'https://discord.com/api/v10/users/@me' -Context (Get-DiscordContext)
+        ```
 
         .INPUTS
         None

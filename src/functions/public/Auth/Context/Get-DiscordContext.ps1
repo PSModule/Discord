@@ -9,13 +9,19 @@ function Get-DiscordContext {
         Restore the default, one named context, or all saved contexts from the encrypted Context vault.
 
         .EXAMPLE
+        ```powershell
         Get-DiscordContext
+        ```
 
         .EXAMPLE
+        ```powershell
         Get-DiscordContext -Context 'automation'
+        ```
 
         .EXAMPLE
+        ```powershell
         Get-DiscordContext -ListAvailable
+        ```
 
         .INPUTS
         None

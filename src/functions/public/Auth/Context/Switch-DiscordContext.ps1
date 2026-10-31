@@ -7,7 +7,9 @@ function Switch-DiscordContext {
         Persist the default selection without authenticating or refreshing the connection.
 
         .EXAMPLE
+        ```powershell
         Switch-DiscordContext -Context 'personal'
+        ```
 
         .INPUTS
         System.String

@@ -7,7 +7,9 @@ function Get-DiscordConfig {
         Return a copy of the saved settings or defaults without creating a vault.
 
         .EXAMPLE
+        ```powershell
         Get-DiscordConfig
+        ```
 
         .INPUTS
         None

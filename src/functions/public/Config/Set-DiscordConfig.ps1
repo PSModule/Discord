@@ -9,10 +9,14 @@ function Set-DiscordConfig {
         Change only specified settings. A nonempty default must identify an existing saved context.
 
         .EXAMPLE
+        ```powershell
         Set-DiscordConfig -RetryCount 3 -RetryInterval 1 -TimeoutSeconds 100
+        ```
 
         .EXAMPLE
+        ```powershell
         Set-DiscordConfig -DefaultContext 'automation' -PassThru
+        ```
 
         .INPUTS
         None

@@ -10,10 +10,14 @@ function Disconnect-DiscordAccount {
         This does not refresh or remotely revoke tokens.
 
         .EXAMPLE
+        ```powershell
         Disconnect-DiscordAccount
+        ```
 
         .EXAMPLE
+        ```powershell
         Get-DiscordContext -Context 'personal' | Disconnect-DiscordAccount
+        ```
 
         .INPUTS
         System.String

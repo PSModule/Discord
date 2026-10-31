@@ -9,10 +9,13 @@ function Connect-DiscordAccount {
         Normal Discord account session tokens and self-bot authentication are not supported.
 
         .EXAMPLE
+        ```powershell
         $token = Read-Host -Prompt 'Bot token' -AsSecureString
         Connect-DiscordAccount -BotToken $token
+        ```
 
         .EXAMPLE
+        ```powershell
         $secret = Read-Host -Prompt 'OAuth2 client secret' -AsSecureString
         $connection = @{
             ClientID = 'YOUR_APPLICATION_ID'
@@ -20,9 +23,12 @@ function Connect-DiscordAccount {
             RedirectUri = 'http://localhost:53682/'
         }
         Connect-DiscordAccount @connection -Name 'personal'
+        ```
 
         .EXAMPLE
+        ```powershell
         Connect-DiscordAccount -BotToken $token -Name 'automation' -NotDefault -PassThru
+        ```
 
         .INPUTS
         None
